@@ -7,7 +7,7 @@ const nextConfig = {
   },
   async rewrites() {
     const apiBaseUrl =
-      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/SpatialBrick";
+      process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8081/SpatialBrick";
 
     return [
       {

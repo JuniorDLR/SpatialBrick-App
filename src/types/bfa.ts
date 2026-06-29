@@ -26,7 +26,7 @@ export type QuestionType =
   | "TYPE_CHECKBOX_IMAGE"
   | "TYPE_TEXT_LIST_RANDOM";
 
-export type ExamPhase = "welcome" | "instructions" | "test" | "completed";
+export type ExamPhase = "login" | "register" | "dashboard" | "welcome" | "instructions" | "test" | "completed";
 
 export type QuestionOption = {
   id: string;
@@ -66,11 +66,15 @@ export type BfaSectionConfig = {
 };
 
 export type UserDemographics = {
+  identificacion: string;
   fullName: string;
-  age: string;
+  birthDate: string;
   gender: string;
   educationLevel: string;
-  institution?: string;
+  email: string;
+  phone: string;
+  jobPosition: string;
+  profession: string;
 };
 
 /** Valor en UI durante la prueba; null = sin responder aun. */

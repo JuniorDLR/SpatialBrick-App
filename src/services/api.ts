@@ -1,9 +1,13 @@
 export type CandidatoData = {
-  nombre: string;
-  edad?: number | string;
+  identificacion?: string;
+  nombreCompleto: string;
+  fechaNacimiento?: string;
   genero?: string;
-  escolaridad?: string;
+  nivelEducativo?: string;
   email?: string;
+  telefono?: string;
+  puestoAplica?: string;
+  profesion?: string;
   [key: string]: unknown;
 };
 
@@ -47,7 +51,12 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit): Promi
     let detail = fallbackMessage;
     try {
       const raw = await response.text();
-      detail = raw || fallbackMessage;
+      try {
+        const json = JSON.parse(raw);
+        detail = json.error || raw || fallbackMessage;
+      } catch {
+        detail = raw || fallbackMessage;
+      }
     } catch {
       detail = fallbackMessage;
     }
@@ -95,13 +104,28 @@ function normalizeEstructuraTest(payload: unknown): EstructuraTestResponse {
   };
 }
 
-export async function iniciarTest(
-  candidatoData: CandidatoData,
-): Promise<IniciarTestResponse> {
-  const data = await fetchJson<JsonRecord>("/rest/candidatos/iniciar-test", {
+export async function loginCandidato(identificacion: string): Promise<JsonRecord> {
+  return fetchJson<JsonRecord>(`/rest/candidatos/${encodeURIComponent(identificacion)}/login`);
+}
+
+export async function registrarCandidato(candidatoData: CandidatoData): Promise<JsonRecord> {
+  return fetchJson<JsonRecord>("/rest/candidatos/registro", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(candidatoData),
+  });
+}
+
+export async function obtenerTestsCandidato(identificacion: string): Promise<any[]> {
+  return fetchJson<any[]>(`/rest/candidatos/${encodeURIComponent(identificacion)}/tests`);
+}
+
+export async function iniciarTest(
+  identificacion: string,
+  codigoTest: string,
+): Promise<IniciarTestResponse> {
+  const data = await fetchJson<JsonRecord>(`/rest/candidatos/${encodeURIComponent(identificacion)}/test/${encodeURIComponent(codigoTest)}/iniciar`, {
+    method: "POST",
   });
 
   const idIntento = data.idIntento ?? data.id ?? data.intentoId;
@@ -111,8 +135,7 @@ export async function iniciarTest(
 
   return {
     idIntento: idIntento as string | number,
-    codigoTest:
-      typeof data.codigoTest === "string" ? data.codigoTest : undefined,
+    codigoTest: typeof data.codigoTest === "string" ? data.codigoTest : codigoTest,
   };
 }
 

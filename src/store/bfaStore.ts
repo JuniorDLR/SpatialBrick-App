@@ -30,6 +30,7 @@ import {
 
 type BfaStoreState = {
   phase: ExamPhase;
+  idIntento: string | number | null;
   user: UserDemographics | null;
   answers: Record<string, BfaAnswer>;
   currentSectionIndex: number;
@@ -39,7 +40,9 @@ type BfaStoreState = {
   startedAt: string | null;
   completedAt: string | null;
 
+  setIdIntento: (id: string | number) => void;
   setUser: (user: UserDemographics) => void;
+  setPhase: (phase: ExamPhase) => void;
   goToInstructions: () => void;
   ensureFluencyLetterForCurrentSection: () => void;
   startCurrentSection: () => void;
@@ -80,7 +83,8 @@ const createEmptyFactorResults = (): BfaSubmissionPayload["results"] => ({
 });
 
 const initialState = {
-  phase: "welcome" as ExamPhase,
+  phase: "login" as ExamPhase,
+  idIntento: null,
   user: null,
   answers: {},
   currentSectionIndex: 0,
@@ -96,12 +100,16 @@ export { getAnswerKey, NO_CONTESTADA };
 export const useBfaStore = create<BfaStoreState>((set, get) => ({
   ...initialState,
 
+  setIdIntento: (id) => set({ idIntento: id }),
+
   setUser: (user) =>
     set({
       user,
-      phase: "instructions",
+      phase: "dashboard",
       currentSectionIndex: 0,
     }),
+
+  setPhase: (phase: ExamPhase) => set({ phase }),
 
   goToInstructions: () =>
     set({

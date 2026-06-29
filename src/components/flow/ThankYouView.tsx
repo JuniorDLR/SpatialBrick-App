@@ -3,15 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Loader2, ServerCrash } from "lucide-react";
 import { useBfaStore } from "@/store/bfaStore";
-import { submitBfaPayload } from "@/services/bfaSubmission";
+import { finalizarTest, type FinalizarRespuestaItem } from "@/services/api";
 import { DarkCard, FeedbackPanel } from "@/components/ui";
 
 type SubmissionState = "submitting" | "success" | "error";
 
 export function ThankYouView() {
-  const buildSubmissionPayload = useBfaStore(
-    (state) => state.buildSubmissionPayload,
-  );
+  const answers = useBfaStore((state) => state.answers);
+  const idIntento = useBfaStore((state) => state.idIntento);
   const [submissionState, setSubmissionState] =
     useState<SubmissionState>("submitting");
   const [message, setMessage] = useState("Preparando resultados...");
@@ -21,28 +20,31 @@ export function ThankYouView() {
     if (hasSubmittedRef.current) {
       return;
     }
-
     hasSubmittedRef.current = true;
-    const payload = buildSubmissionPayload();
 
-    if (!payload) {
+    if (!idIntento) {
       setSubmissionState("error");
-      setMessage("No se encontro informacion del candidato para enviar.");
+      setMessage("No se encontró una sesión activa (idIntento) para guardar.");
       return;
     }
 
-    submitBfaPayload(payload)
+    // Aplanar todas las respuestas del estado de BFA a un arreglo secuencial para OpenXava
+    const answerValues = Object.values(answers);
+    const payload: FinalizarRespuestaItem[] = answerValues.map((ans, index) => ({
+      numeroEjercicio: index + 1,
+      opcionElegida: String(ans.value || ""),
+    }));
+
+    finalizarTest(idIntento, payload)
       .then((result) => {
-        setSubmissionState(result.ok ? "success" : "error");
-        setMessage(result.message);
+        setSubmissionState("success");
+        setMessage("Resultado BFA enviado correctamente a OpenXava.");
       })
-      .catch(() => {
+      .catch((err) => {
         setSubmissionState("error");
-        setMessage(
-          "El endpoint /api/submit-bfa aun no esta disponible para confirmar el envio.",
-        );
+        setMessage(err.message || "Ocurrió un error al enviar el resultado.");
       });
-  }, [buildSubmissionPayload]);
+  }, [answers, idIntento]);
 
   const Icon =
     submissionState === "submitting"
