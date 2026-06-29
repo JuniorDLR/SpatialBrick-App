@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --app-bg:
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.08), transparent 34rem),
+    linear-gradient(180deg, #f8fafc 0%, #ffffff 52%, #f1f5f9 100%);
+  --app-text: #1e293b;
+  --selection-bg: rgba(212, 175, 55, 0.28);
+  --selection-text: #0f172a;
+}
+
+.dark {
+  color-scheme: dark;
+  --app-bg:
+    radial-gradient(circle at top, rgba(184, 190, 199, 0.08), transparent 34rem),
+    linear-gradient(180deg, #050607 0%, #0b0d10 52%, #050607 100%);
+  --app-text: #e8eaed;
+  --selection-bg: rgba(217, 185, 93, 0.35);
+  --selection-text: #f7f8fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: #f8fafc;
+}
+
+html.dark {
+  background: #050607;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  transition:
+    background-color 300ms ease-in-out,
+    color 300ms ease-in-out;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
