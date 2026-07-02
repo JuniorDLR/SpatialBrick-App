@@ -95,15 +95,7 @@ export function SectionTestView() {
       </div>
 
       <div className="mx-auto max-w-3xl space-y-8 px-6 pt-12">
-        {activeTest.instrucciones && (
-          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-900/5 dark:bg-obsidian-800 dark:ring-white/10">
-            <h3 className="mb-2 font-semibold text-slate-900 dark:text-silver-100">Instrucciones del examen</h3>
-            <p 
-              className="whitespace-pre-line text-base leading-7 text-slate-600 dark:text-silver-300"
-              dangerouslySetInnerHTML={{ __html: activeTest.instrucciones }}
-            />
-          </div>
-        )}
+
         {activeTest.ejercicios.map((ej) => {
           const selectedOption = answers[ej.numeroEjercicio];
           const hasAnswered = !!selectedOption;

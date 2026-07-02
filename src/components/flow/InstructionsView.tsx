@@ -24,8 +24,15 @@ export function InstructionsView() {
           {activeTest.codigoTest || "Batería Factorial de Aptitudes"}
         </h1>
         
-
-
+        {activeTest.instrucciones && (
+          <div className="mt-8 rounded-xl bg-slate-100/50 p-6 shadow-inner ring-1 ring-slate-900/5 dark:bg-obsidian-950/50 dark:ring-white/5">
+            <h3 className="mb-3 font-semibold text-slate-900 dark:text-silver-100">Instrucciones del examen:</h3>
+            <p 
+              className="whitespace-pre-line text-base leading-relaxed text-slate-700 dark:text-silver-300"
+              dangerouslySetInnerHTML={{ __html: activeTest.instrucciones }}
+            />
+          </div>
+        )}
         <div className="mt-8 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-obsidian-800">
             <Clock3 className="h-6 w-6 text-gold-500" aria-hidden="true" />
