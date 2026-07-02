@@ -12,7 +12,19 @@ export function InstructionsView() {
     return null;
   }
 
-  const tiempoMinutos = Math.floor(activeTest.tiempoLimiteSegundos / 60);
+  const totalSegundos = activeTest.tiempoLimiteSegundos;
+  const minutos = Math.floor(totalSegundos / 60);
+  const segundos = totalSegundos % 60;
+  
+  let textoTiempo = "";
+  if (minutos > 0) {
+    textoTiempo += `${minutos} minuto${minutos !== 1 ? 's' : ''}`;
+  }
+  if (segundos > 0) {
+    if (textoTiempo) textoTiempo += " y ";
+    textoTiempo += `${segundos} segundo${segundos !== 1 ? 's' : ''}`;
+  }
+  if (!textoTiempo) textoTiempo = "0 segundos";
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-10 dark:bg-obsidian-900">
@@ -38,7 +50,7 @@ export function InstructionsView() {
             <Clock3 className="h-6 w-6 text-gold-500" aria-hidden="true" />
             <h2 className="mt-4 font-semibold text-slate-900 dark:text-silver-50">Tiempo estricto</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-silver-400">
-              Contarás con un máximo de {tiempoMinutos} minutos para resolver los {activeTest.ejercicios.length} ejercicios.
+              Contarás con un máximo de {textoTiempo} para resolver los {activeTest.ejercicios.length} ejercicios.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-obsidian-800">
