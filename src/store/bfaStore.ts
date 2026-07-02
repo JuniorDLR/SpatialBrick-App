@@ -39,7 +39,11 @@ type BfaStoreState = {
   
   // Finalization
   completeTest: () => void;
-  getPayloadToSubmit: () => FinalizarRespuestaItem[];
+  getPayloadToSubmit: () => {
+    respuestas: FinalizarRespuestaItem[];
+    minutosConsumidos: number;
+    segundosConsumidos: number;
+  };
   resetExam: () => void;
 };
 
@@ -114,14 +118,23 @@ export const useBfaStore = create<BfaStoreState>()(
   },
 
   getPayloadToSubmit: () => {
-    const { activeTest, answers } = get();
-    if (!activeTest) return [];
+    const { activeTest, answers, timeRemainingSeconds } = get();
+    if (!activeTest) {
+      return { respuestas: [], minutosConsumidos: 0, segundosConsumidos: 0 };
+    }
     
     // Devolvemos el array de respuestas formatedo para la API
-    return activeTest.ejercicios.map((ej) => ({
+    const respuestas = activeTest.ejercicios.map((ej) => ({
       numeroEjercicio: ej.numeroEjercicio,
       opcionElegida: answers[ej.numeroEjercicio] ?? null,
     }));
+
+    const consumido = activeTest.tiempoLimiteSegundos - timeRemainingSeconds;
+    return {
+      respuestas,
+      minutosConsumidos: Math.floor(consumido / 60),
+      segundosConsumidos: consumido % 60,
+    };
   },
 
   resetExam: () => {

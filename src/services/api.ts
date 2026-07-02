@@ -155,13 +155,15 @@ export function construirUrlImagen(urlOrId: string | number): string {
 export async function finalizarTest(
   idIntento: string | number,
   respuestas: FinalizarRespuestaItem[],
+  minutosConsumidos: number,
+  segundosConsumidos: number
 ): Promise<JsonRecord> {
   return fetchJson<JsonRecord>(
     `/rest/intentos/${encodeURIComponent(String(idIntento))}/finalizar`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ respuestas }),
+      body: JSON.stringify({ respuestas, minutosConsumidos, segundosConsumidos }),
     },
   );
 }

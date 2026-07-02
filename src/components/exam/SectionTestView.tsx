@@ -48,7 +48,12 @@ export function SectionTestView() {
 
     try {
       const payload = getPayloadToSubmit();
-      await finalizarTest(idIntento, payload);
+      await finalizarTest(
+        idIntento, 
+        payload.respuestas, 
+        payload.minutosConsumidos, 
+        payload.segundosConsumidos
+      );
       completeTest();
     } catch (err) {
       console.error("Error al finalizar el test", err);
