@@ -146,8 +146,10 @@ export async function obtenerEstructuraTest(
   return normalizeEstructuraTest(data);
 }
 
-export function construirUrlImagen(idImagen: string | number): string {
-  return `/rest/test/imagen/${encodeURIComponent(String(idImagen))}`;
+export function construirUrlImagen(urlOrId: string | number): string {
+  const str = String(urlOrId);
+  if (str.startsWith("/")) return str; // Si ya viene con "/rest/...", lo retornamos tal cual
+  return `/rest/test/imagen/${encodeURIComponent(str)}`;
 }
 
 export async function finalizarTest(

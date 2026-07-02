@@ -1,300 +1,137 @@
 "use client";
 
 import { create } from "zustand";
-import {
-  BFA_FACTORS,
-  BFA_TEST_ID,
-  BFA_TEST_NAME,
-  FLUENCY_VERBAL_LETTERS,
-} from "@/config/bfaConstants";
-import {
-  BFA_SECTIONS_CONFIG,
-  getSectionConfigByIndex,
-  minutesToSeconds,
-} from "@/config/bfaSectionConfig";
-import {
-  getAnswerKey,
-  isAnswerProvided,
-  normalizeStoredAnswer,
-} from "@/lib/answerUtils";
-import {
-  NO_CONTESTADA,
-  type AnswerValue,
-  type BfaAnswer,
-  type BfaFactor,
-  type BfaSectionId,
-  type BfaSubmissionPayload,
-  type ExamPhase,
-  type UserDemographics,
-} from "@/types/bfa";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { EstructuraTestResponse, FinalizarRespuestaItem } from "@/services/api";
+import type { ExamPhase, UserDemographics } from "@/types/bfa";
 
 type BfaStoreState = {
   phase: ExamPhase;
-  idIntento: string | number | null;
   user: UserDemographics | null;
-  answers: Record<string, BfaAnswer>;
-  currentSectionIndex: number;
+  
+  // Datos del test activo
+  idIntento: string | number | null;
+  activeTest: EstructuraTestResponse | null;
+  
+  // Respuestas (key: numeroEjercicio, value: opcionElegida)
+  answers: Record<number, string>;
+  
+  // Timer state
   timeRemainingSeconds: number;
   isTimerRunning: boolean;
-  fluencyVerbalLetter: string | null;
   startedAt: string | null;
   completedAt: string | null;
 
-  setIdIntento: (id: string | number) => void;
-  setUser: (user: UserDemographics) => void;
+  // Acciones
+  setUser: (user: UserDemographics | null) => void;
   setPhase: (phase: ExamPhase) => void;
-  goToInstructions: () => void;
-  ensureFluencyLetterForCurrentSection: () => void;
-  startCurrentSection: () => void;
-  saveAnswer: (params: {
-    sectionId: BfaSectionId;
-    questionId: string;
-    value: AnswerValue;
-  }) => void;
-  getAnswerValue: (sectionId: BfaSectionId, questionId: string) => AnswerValue;
+  
+  // Test actions
+  setupTest: (idIntento: string | number, testData: EstructuraTestResponse) => void;
+  startTest: () => void;
+  saveAnswer: (numeroEjercicio: number, opcionElegida: string) => void;
+  getAnswerValue: (numeroEjercicio: number) => string | null;
+  
+  // Timer actions
   setTimeRemainingSeconds: (seconds: number) => void;
   pauseTimer: () => void;
   resumeTimer: () => void;
-  finalizeSectionAnswers: (questionIds: string[]) => void;
-  expireCurrentSection: (questionIds: string[]) => void;
-  completeExam: () => void;
-  buildSubmissionPayload: () => BfaSubmissionPayload | null;
+  
+  // Finalization
+  completeTest: () => void;
+  getPayloadToSubmit: () => FinalizarRespuestaItem[];
   resetExam: () => void;
-
-  getCurrentSectionConfig: () => (typeof BFA_SECTIONS_CONFIG)[number] | undefined;
-  getNextSectionConfig: () => (typeof BFA_SECTIONS_CONFIG)[number] | undefined;
-  isLastSection: () => boolean;
-  canNavigateBack: () => boolean;
-  canNavigateForwardManually: () => boolean;
 };
-
-const pickRandomFluencyLetter = (): string => {
-  const index = Math.floor(Math.random() * FLUENCY_VERBAL_LETTERS.length);
-  return FLUENCY_VERBAL_LETTERS[index];
-};
-
-const createEmptyFactorResults = (): BfaSubmissionPayload["results"] => ({
-  VOCT: { sections: [] },
-  ST: { sections: [] },
-  RT: { sections: [] },
-  CV: { sections: [] },
-  NT: { sections: [] },
-  FV: { sections: [] },
-});
 
 const initialState = {
   phase: "login" as ExamPhase,
-  idIntento: null,
   user: null,
+  idIntento: null,
+  activeTest: null,
   answers: {},
-  currentSectionIndex: 0,
   timeRemainingSeconds: 0,
   isTimerRunning: false,
-  fluencyVerbalLetter: null,
   startedAt: null,
   completedAt: null,
 };
 
-export { getAnswerKey, NO_CONTESTADA };
+export const useBfaStore = create<BfaStoreState>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
 
-export const useBfaStore = create<BfaStoreState>((set, get) => ({
-  ...initialState,
+  setUser: (user) => set({ user, phase: user ? "dashboard" : "login" }),
+  
+  setPhase: (phase) => set({ phase }),
 
-  setIdIntento: (id) => set({ idIntento: id }),
-
-  setUser: (user) =>
+  setupTest: (idIntento, testData) => {
     set({
-      user,
-      phase: "dashboard",
-      currentSectionIndex: 0,
-    }),
-
-  setPhase: (phase: ExamPhase) => set({ phase }),
-
-  goToInstructions: () =>
-    set({
+      idIntento,
+      activeTest: testData,
       phase: "instructions",
+      answers: {},
       isTimerRunning: false,
-    }),
-
-  ensureFluencyLetterForCurrentSection: () => {
-    const section = getSectionConfigByIndex(get().currentSectionIndex);
-
-    if (section?.id === "FV" && !get().fluencyVerbalLetter) {
-      set({ fluencyVerbalLetter: pickRandomFluencyLetter() });
-    }
+      timeRemainingSeconds: testData.tiempoLimiteSegundos,
+    });
   },
 
-  startCurrentSection: () => {
-    const section = getSectionConfigByIndex(get().currentSectionIndex);
-
-    if (!section) {
-      return;
-    }
-
-    const updates: Partial<BfaStoreState> = {
+  startTest: () => {
+    set({
       phase: "test",
-      timeRemainingSeconds: minutesToSeconds(section.timeLimitMinutes),
       isTimerRunning: true,
-      startedAt: get().startedAt ?? new Date().toISOString(),
-    };
-
-    if (section.id === "FV" && !get().fluencyVerbalLetter) {
-      updates.fluencyVerbalLetter = pickRandomFluencyLetter();
-    }
-
-    set(updates);
+      startedAt: new Date().toISOString(),
+    });
   },
 
-  saveAnswer: ({ sectionId, questionId, value }) => {
-    if (get().phase !== "test") {
-      return;
-    }
-
-    if (!isAnswerProvided(value)) {
-      set((state) => {
-        const nextAnswers = { ...state.answers };
-        delete nextAnswers[getAnswerKey(sectionId, questionId)];
-        return { answers: nextAnswers };
-      });
-      return;
-    }
-
+  saveAnswer: (numeroEjercicio, opcionElegida) => {
+    if (get().phase !== "test") return;
     set((state) => ({
       answers: {
         ...state.answers,
-        [getAnswerKey(sectionId, questionId)]: {
-          sectionId,
-          questionId,
-          value: normalizeStoredAnswer(value),
-          answeredAt: new Date().toISOString(),
-        },
+        [numeroEjercicio]: opcionElegida,
       },
     }));
   },
 
-  getAnswerValue: (sectionId, questionId) =>
-    get().answers[getAnswerKey(sectionId, questionId)]?.value ?? null,
+  getAnswerValue: (numeroEjercicio) => get().answers[numeroEjercicio] ?? null,
 
-  setTimeRemainingSeconds: (seconds) =>
-    set({ timeRemainingSeconds: Math.max(0, seconds) }),
-
+  setTimeRemainingSeconds: (seconds) => set({ timeRemainingSeconds: Math.max(0, seconds) }),
+  
   pauseTimer: () => set({ isTimerRunning: false }),
-
+  
   resumeTimer: () => {
     if (get().phase === "test") {
       set({ isTimerRunning: true });
     }
   },
 
-  finalizeSectionAnswers: (questionIds) => {
-    const state = get();
-    const section = getSectionConfigByIndex(state.currentSectionIndex);
-
-    if (!section) {
-      return;
-    }
-
-    const stampedAt = new Date().toISOString();
-    const nextAnswers = { ...state.answers };
-
-    questionIds.forEach((questionId) => {
-      const key = getAnswerKey(section.id, questionId);
-      const existing = nextAnswers[key];
-
-      if (existing) {
-        nextAnswers[key] = {
-          ...existing,
-          value: normalizeStoredAnswer(existing.value as AnswerValue),
-        };
-        return;
-      }
-
-      nextAnswers[key] = {
-        sectionId: section.id,
-        questionId,
-        value: NO_CONTESTADA,
-        answeredAt: stampedAt,
-      };
-    });
-
-    set({ answers: nextAnswers, isTimerRunning: false });
-  },
-
-  expireCurrentSection: (questionIds) => {
-    const state = get();
-    get().finalizeSectionAnswers(questionIds);
-
-    if (state.isLastSection()) {
-      get().completeExam();
-      return;
-    }
-
-    set({
-      currentSectionIndex: state.currentSectionIndex + 1,
-      phase: "instructions",
-      timeRemainingSeconds: 0,
-      isTimerRunning: false,
-    });
-  },
-
-  completeExam: () =>
+  completeTest: () => {
     set({
       phase: "completed",
-      completedAt: new Date().toISOString(),
-      timeRemainingSeconds: 0,
       isTimerRunning: false,
-    }),
-
-  buildSubmissionPayload: () => {
-    const state = get();
-
-    if (!state.user) {
-      return null;
-    }
-
-    const results = createEmptyFactorResults();
-
-    BFA_SECTIONS_CONFIG.forEach((sectionConfig) => {
-      const sectionAnswers = Object.values(state.answers).filter(
-        (answer) => answer.sectionId === sectionConfig.id,
-      );
-
-      results[sectionConfig.factor].sections.push({
-        sectionId: sectionConfig.id,
-        answers: sectionAnswers,
-      });
+      completedAt: new Date().toISOString(),
     });
-
-    return {
-      testId: BFA_TEST_ID,
-      testName: BFA_TEST_NAME,
-      candidate: state.user,
-      metadata: {
-        startedAt: state.startedAt,
-        completedAt: state.completedAt,
-        fluencyVerbalLetter: state.fluencyVerbalLetter,
-      },
-      results,
-    };
   },
 
-  resetExam: () => set(initialState),
+  getPayloadToSubmit: () => {
+    const { activeTest, answers } = get();
+    if (!activeTest) return [];
+    
+    // Devolvemos el array de respuestas formatedo para la API
+    return activeTest.ejercicios.map((ej) => ({
+      numeroEjercicio: ej.numeroEjercicio,
+      opcionElegida: answers[ej.numeroEjercicio] ?? null,
+    }));
+  },
 
-  getCurrentSectionConfig: () => getSectionConfigByIndex(get().currentSectionIndex),
-
-  getNextSectionConfig: () =>
-    getSectionConfigByIndex(get().currentSectionIndex + 1),
-
-  isLastSection: () => get().currentSectionIndex >= BFA_SECTIONS_CONFIG.length - 1,
-
-  canNavigateBack: () => false,
-
-  canNavigateForwardManually: () => false,
-}));
-
-export function getSectionsByFactor(factor: BfaFactor) {
-  return BFA_SECTIONS_CONFIG.filter((section) => section.factor === factor);
-}
-
-export { BFA_SECTIONS_CONFIG, BFA_FACTORS, FLUENCY_VERBAL_LETTERS };
+  resetExam: () => {
+    // Al resetear, limpiamos el test pero conservamos el usuario
+    set({ ...initialState, user: get().user, phase: "dashboard" });
+  },
+    }),
+    {
+      name: "bfa-storage",
+      storage: createJSONStorage(() => sessionStorage),
+    }
+  )
+);

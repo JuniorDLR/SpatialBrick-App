@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Play, CheckCircle2, Lock, Loader2, User, LogOut } from "lucide-react";
 import { useBfaStore } from "@/store/bfaStore";
 import { Card, PrimaryButton } from "@/components/ui";
-import { obtenerTestsCandidato, iniciarTest } from "@/services/api";
+import { obtenerTestsCandidato, iniciarTest, obtenerEstructuraTest } from "@/services/api";
 
 type TestStatus = {
   codigoTest: string;
@@ -14,8 +14,7 @@ type TestStatus = {
 
 export function DashboardView() {
   const user = useBfaStore((state) => state.user);
-  const setPhase = useBfaStore((state) => state.setPhase);
-  const setIdIntento = useBfaStore((state) => state.setIdIntento);
+  const setupTest = useBfaStore((state) => state.setupTest);
   
   const [tests, setTests] = useState<TestStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,10 +31,9 @@ export function DashboardView() {
     try {
       const data = await obtenerTestsCandidato(identificacion);
       setTests(data);
-    } catch (err: any) {
-      setError(err.message || "Error al cargar las pruebas disponibles.");
-    } finally {
       setIsLoading(false);
+    } catch (err: any) {
+      handleLogout();
     }
   };
 
@@ -47,11 +45,11 @@ export function DashboardView() {
 
     try {
       const data = await iniciarTest(user.identificacion, codigoTest);
-      setIdIntento(data.idIntento);
-      setPhase("instructions");
+      const testData = await obtenerEstructuraTest(codigoTest);
+      
+      setupTest(data.idIntento, testData);
     } catch (err: any) {
-      setError(err.message || "No se pudo iniciar el test.");
-      setIsStarting(false);
+      handleLogout();
     }
   };
 
